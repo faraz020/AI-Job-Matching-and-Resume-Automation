@@ -1,0 +1,465 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "24b84127-799e-48dc-8096-05f7179dac1f",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "b56d7094-b722-4796-be26-1ebd201dba0c",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_JOB_TRACKER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        32
+      ],
+      "id": "40be0708-4fe7-4d33-9428-62c0c882d85e",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_CANDIDATE_PROFILE_TEXT_FILE_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -48,
+        48
+      ],
+      "id": "8fd37bca-816f-4201-8820-24bcef399fc0",
+      "name": "Download file"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=MASTER RESUME:\n{{ $('Extract from File').item.json.data }}\n\nJOB POSTING:\nTitle: {{ $json.title }}\nCompany: {{ $json.company }}\nExplanation of fit: {{ $json.explanation }}\nRed flags: {{ $json.red_flags }}\n\nTASK:\nSelect and reword the most relevant bullets from the master resume \nfor this specific posting. Do NOT invent skills or experience not \npresent in the master resume.\n\nYou MUST include all three projects (project_1 through project_3), \neven if the third is a smaller supporting project. Never omit a field.\n\nReturn JSON:\n{\n  \"summary\": \"2-3 sentence tailored summary\",\n  \"project_1_title\": \"...\", \"project_1_description\": \"...\",\n  \"project_2_title\": \"...\", \"project_2_description\": \"...\",\n  \"project_3_title\": \"...\", \"project_3_description\": \"...\",\n  \"skills_list\": \"comma-separated relevant skills\"\n}\nAlso display the row number as in integer ",
+        "hasOutputParser": false,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        928,
+        96
+      ],
+      "id": "bf850a5f-0da4-497f-8079-2f9820064a7d",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "nvidia/nemotron-3-nano-30b-a3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatNvidia",
+      "typeVersion": 1,
+      "position": [
+        928,
+        288
+      ],
+      "id": "2bd5a1c1-8017-4360-8f69-866c66202c84",
+      "name": "NVIDIA Nemotron Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        48
+      ],
+      "id": "aad3ae44-4cb2-4a7c-8446-5698fd9c82ce",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_RESUME_TEMPLATE_DOCUMENT_ID",
+          "mode": "id"
+        },
+        "name": "automated templated made by llm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1488,
+        96
+      ],
+      "id": "07e37af8-43da-4d83-a4e4-3fd73c70ceb9",
+      "name": "Copy file"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Copy file').item.json.id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.batchBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1904,
+        96
+      ],
+      "id": "e50e0662-b6e3-47e1-ab50-d5e405af7c39",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_JOB_TRACKER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Tailored Resume": "=https://docs.google.com/document/d/{{ $json.documentId }}/edit",
+            "source id": "={{ $('Loop Over Items').item.json['source id'] }}"
+          },
+          "matchingColumns": [
+            "source id"
+          ],
+          "schema": [
+            {
+              "id": "source id",
+              "displayName": "source id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fit_score",
+              "displayName": "fit_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recommended_action",
+              "displayName": "recommended_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "explanation",
+              "displayName": "explanation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "red_flags",
+              "displayName": "red_flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tailored Resume",
+              "displayName": "Tailored Resume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2096,
+        144
+      ],
+      "id": "7ef9cd3f-30eb-4806-84b7-51ac622f3ce2",
+      "name": "Append or update row in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.text;\n\nlet cleaned = raw;\n\n// Remove Markdown fences if present\ncleaned = cleaned\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/\\s*```$/i, '')\n  .trim();\n\nconst start = cleaned.indexOf('{');\nconst end = cleaned.lastIndexOf('}');\n\nif (start === -1 || end === -1) {\n  throw new Error('No valid JSON object found in LLM output');\n}\n\nconst evaluation = JSON.parse(cleaned.slice(start, end + 1));\n\nreturn {\n  json: evaluation\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        96
+      ],
+      "id": "8f081c49-77ec-45b1-89d9-c031897a6d3b",
+      "name": "json converter"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('json converter').item.json;\n\nconst body = {\n  requests: [\n    { replaceAllText: { containsText: { text: \"{{summary}}\", matchCase: true }, replaceText: data.summary } },\n    { replaceAllText: { containsText: { text: \"{{project_1_title}}\", matchCase: true }, replaceText: data.project_1_title } },\n    { replaceAllText: { containsText: { text: \"{{project_1_description}}\", matchCase: true }, replaceText: data.project_1_description } },\n    { replaceAllText: { containsText: { text: \"{{project_2_title}}\", matchCase: true }, replaceText: data.project_2_title } },\n    { replaceAllText: { containsText: { text: \"{{project_2_description}}\", matchCase: true }, replaceText: data.project_2_description } },\n    { replaceAllText: { containsText: { text: \"{{project_3_title}}\", matchCase: true }, replaceText: data.project_3_title } },\n    { replaceAllText: { containsText: { text: \"{{project_3_description}}\", matchCase: true }, replaceText: data.project_3_description } },\n    { replaceAllText: { containsText: { text: \"{{skills_list}}\", matchCase: true }, replaceText: data.skills_list } }\n  ]\n};\n\nreturn [{ json: { batchBody: body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        96
+      ],
+      "id": "5f504d89-575d-452a-a063-6ac4823b9d7b",
+      "name": "format for google doc"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "json converter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NVIDIA Nemotron Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "format for google doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "json converter": {
+      "main": [
+        [
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format for google doc": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "name": "Tailored Resume Generation",
+  "active": false,
+  "pinData": {},
+  "tags": []
+}

@@ -1,0 +1,852 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -512
+      ],
+      "id": "6f47b4f4-a36e-4be8-bcf8-517270dbf27f",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "nvidia/nv-embedqa-e5-v5",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsNvidia",
+      "typeVersion": 1,
+      "position": [
+        176,
+        176
+      ],
+      "id": "6e8ac1f3-228d-42af-b8db-2b3a0c1d840e",
+      "name": "NVIDIA Nemotron Embeddings"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "loader": "textLoader",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "type",
+                "value": "candidate_profile"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        176
+      ],
+      "id": "d062f513-8d88-44de-ab15-722be3808012",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_CANDIDATE_PROFILE_TEXT_FILE_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -64,
+        -48
+      ],
+      "id": "bd4a04b6-39c9-4e7a-b23e-e66685aede1d",
+      "name": "get user skill list"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "tableName": {
+          "__rl": true,
+          "value": "jobs",
+          "mode": "list"
+        },
+        "prompt": "={{ $json.content }}",
+        "topK": 9,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        -784
+      ],
+      "id": "0a1ce32e-18af-4588-8821-c84b3f8f782b",
+      "name": "job retrieval"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        384,
+        -832
+      ],
+      "id": "5344cc35-8c39-4e5a-ae34-501b1aa95a93",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "user_profiles",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -512
+      ],
+      "id": "b39d80e5-248c-43a7-b058-e28e42691627",
+      "name": "skills getter"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "nvidia/nv-embedqa-e5-v5",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsNvidia",
+      "typeVersion": 1,
+      "position": [
+        688,
+        -560
+      ],
+      "id": "a0751572-df1a-4844-a7fe-5142696161f9",
+      "name": "NVIDIA Nemotron Embeddings1"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "user_profiles",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        -48
+      ],
+      "id": "794abdf6-e023-4362-b07c-1a622facc55e",
+      "name": "skill embedder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst output = [];\n\nfor (const item of $input.all()) {\n  const id = item.json.document?.metadata?.source_id;\n  if (id !== undefined && !seen.has(id)) {\n    seen.add(id);\n    output.push(item);\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -976
+      ],
+      "id": "34a44095-fb7f-4651-9701-77e820d854b1",
+      "name": "duplicate remover"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Candidate profile:\n{{ $json.original_job.profile_text }}\n\n==============\nJOB LISTING \n\nSource:\n{{ $json.original_job.document.metadata['source '] }}\n\nSource ID:\n{{ $json.original_job.document.metadata.source_id }}\n\nTitle:\n{{ $json.original_job.document.metadata['title '] }}\n\nCompany:\n{{ $json.original_job.document.metadata['company '] }}\n\nDescription:\n{{ $json.original_job.document.metadata['description  '] }}\n\nLocation:\n{{ $json.original_job.document.metadata['location '] }}\n\nTags / Skills:\n{{ $json.original_job.document.metadata.tags }}\n\nURL:\n{{ $json.original_job.document.metadata['url '] }}",
+        "hasOutputParser": false,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a lenient technical recruiter and job-fit evaluation engine.  Your task is to evaluate exactly ONE job listing against the candidate profile provided in the user message.  Your evaluation must be evidence-based. Use ONLY information explicitly present in the candidate profile and job listing. Do not invent experience, skills, qualifications, certifications, employment history, professional experience, language proficiency, or other facts that are not provided.  JOB IDENTIFICATION RULE:  The job listing contains both a source field and a source_id field.  You must copy both values exactly from the job listing into the corresponding fields in your output.  Do not modify, transform, summarize, or invent either value.  The source and source_id are identifiers only. They are used to match the evaluation to the original job listing after evaluation. They must not influence the fit score or evaluation.  EVALUATE THE CANDIDATE BASED ON:  1. Technical skill overlap 2. Programming languages 3. Frameworks and libraries 4. Tools and platforms 5. Relevant projects and practical experience 6. Education requirements 7. Professional experience requirements 8. Seniority level 9. Job responsibilities 10. Location and work arrangement 11. Explicit required qualifications 12. The candidate's realistic ability to perform the role  IMPORTANT EXPERIENCE RULE:  Do not assume that knowledge of a technology means professional employment experience with that technology.  For example:  - A project using Python is evidence of Python project experience. - It is NOT automatically evidence of professional Python employment. - A university project is NOT the same as years of professional work experience. - Coursework is not the same as professional employment experience. - A listed skill is evidence of knowledge or exposure, but not necessarily professional experience unless the profile explicitly says so.  FIT SCORE:  Return an integer from 0 to 100.  Use these guidelines:  90-100: Exceptional match. The candidate satisfies nearly all important requirements and the role closely matches the candidate's demonstrated skills and experience.  75-89: Strong match. The candidate satisfies most important requirements. Any gaps are relatively minor or reasonably learnable.  60-74: Moderate match. There is meaningful overlap, but there are notable gaps in skills, experience, seniority, or requirements.  40-59: Weak match. Some relevant overlap exists, but important requirements are missing.  0-39: Very poor match. The role is substantially outside the candidate's current demonstrated capabilities or has major requirement mismatches.  Do not automatically penalize the candidate heavily for missing optional or preferred qualifications.  RED FLAGS:  Include only meaningful concerns that could materially reduce the candidate's suitability.  Examples include:  - A major seniority mismatch - A requirement for professional experience substantially beyond the candidate's demonstrated experience - A mandatory degree or certification not present in the profile - A required technology with no evidence of related experience - A major mismatch between the job responsibilities and the candidate's background - A mandatory location, work authorization, or work arrangement requirement that clearly conflicts with the candidate's situation - A clearly stated requirement that the candidate does not satisfy  Do not list every missing skill as a red flag.  RECOMMENDED ACTION:  Use exactly one of these values:  \"apply\"  Use when the candidate is a strong enough match that applying is clearly worthwhile.  \"review\"  Use when the candidate has meaningful potential but there are notable gaps or uncertainties that should be reviewed.  \"skip\"  Use when the role is a poor match or contains major requirement mismatches.  EXPLANATION:  Write exactly 1-2 concise sentences explaining the fit score.  The explanation must:  - Explain the main reason for the score - Mention the strongest relevant match - Mention the most important gap when one exists  OUTPUT FORMAT:  Return ONLY one valid JSON object.  Do not return Markdown.  Do not wrap the JSON in code fences.  Do not include any text before or after the JSON object.  The JSON must contain exactly these seven fields:  {   \"source\": \"string\",   \"source_id\": \"string\",   \"fit_score\": 0,   \"explanation\": \"string\",   \"red_flags\": [],   \"recommended_action\": \"apply\" }  The source must be copied exactly from the job listing.  The source_id must be copied exactly from the job listing.  fit_score must be an integer between 0 and 100.  explanation must contain exactly 1-2 concise sentences.  red_flags must be an array of strings. Use an empty array if there are no meaningful red flags.  recommended_action must be exactly one of: \"apply\", \"review\", or \"skip\".  Do not include any additional fields."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1632,
+        -624
+      ],
+      "id": "04ffd44c-492f-4d71-859c-765dbe51222a",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "nvidia/nemotron-3-nano-30b-a3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatNvidia",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        -416
+      ],
+      "id": "259f719e-9bcb-4063-af03-84c581233b0a",
+      "name": "NVIDIA Nemotron Chat Model"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1184,
+        -608
+      ],
+      "id": "1ae14758-54e7-4bfa-a7ab-d004db62088f",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "profile_chunks",
+        "include": "specifiedFields",
+        "fieldsToInclude": "content",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        384,
+        -384
+      ],
+      "id": "2f3fb50a-4187-4103-91d6-54ab3f40483e",
+      "name": "combine skills"
+    },
+    {
+      "parameters": {
+        "jsCode": "const chunks = $json.profile_chunks || [];\n\nconst profileText = chunks\n  .map(chunk => chunk.content || \"\")\n  .filter(Boolean)\n  .join(\"\\n\\n\");\n\nreturn [\n  {\n    json: {\n      profile_text: profileText\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -384
+      ],
+      "id": "17ce39e4-a162-4188-9f98-7251ba3814e5",
+      "name": "combine chunks"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        960,
+        -608
+      ],
+      "id": "6540ce42-389e-4dbf-9cc9-ccb76979016d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    original_job: $json,\n    profile_text: $json.profile_text || \"\",\n    job_source_id: $json.document?.metadata?.source_id || \"\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -624
+      ],
+      "id": "34c4d464-b0a5-4e43-9c8d-4cb7a2af6fe3",
+      "name": "prepare job"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $json.text;\n\nlet cleaned = raw;\n\n// Remove Markdown fences if present\ncleaned = cleaned\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/\\s*```$/i, '')\n  .trim();\n\nconst start = cleaned.indexOf('{');\nconst end = cleaned.lastIndexOf('}');\n\nif (start === -1 || end === -1) {\n  throw new Error('No valid JSON object found in LLM output');\n}\n\nconst evaluation = JSON.parse(cleaned.slice(start, end + 1));\n\nreturn {\n  json: evaluation\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        -480
+      ],
+      "id": "33b9032c-4818-4312-ac86-455229506ccb",
+      "name": "json converter"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "jobs",
+        "limit": 1000
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        -928
+      ],
+      "id": "7a1d1c7a-4348-4369-b3c9-a5ad64579f09",
+      "name": "Get many rows"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rankings = $('Collect Rankings').first().json.rankings;\nconst jobChunks = $input.all();\n\nconst jobsBySourceId = new Map();\n\nfor (const item of jobChunks) {\n  const metadata = item.json.metadata || {};\n  const sourceId = metadata[\"source_id\"];\n\n  if (!sourceId) continue;\n\n  const id = String(sourceId);\n\n  if (!jobsBySourceId.has(id)) {\n    jobsBySourceId.set(id, []);\n  }\n\n  jobsBySourceId.get(id).push(item.json);\n}\n\nconst results = [];\n\nfor (const evaluation of rankings) {\n  const chunks = jobsBySourceId.get(String(evaluation.source_id));\n\n  if (!chunks || chunks.length === 0) {\n    continue;\n  }\n\n  const firstMetadata = chunks[0].metadata || {};\n\n  const fullDescription = chunks\n    .map(chunk => {\n      const metadata = chunk.metadata || {};\n      return metadata[\"description  \"] || chunk.content || \"\";\n    })\n    .join(\"\\n\\n\");\n\n  results.push({\n    json: {\n      source_id: evaluation.source_id,\n      fit_score: evaluation.fit_score,\n      explanation: evaluation.explanation,\n      red_flags: evaluation.red_flags,\n      recommended_action: evaluation.recommended_action,\n\n      title: firstMetadata[\"title \"] || \"\",\n      company: firstMetadata[\"company \"] || \"\",\n      location: firstMetadata[\"location \"] || \"\",\n      url: firstMetadata[\"url \"] || \"\",\n      source: firstMetadata[\"source \"] || \"\",\n      tags: firstMetadata.tags || [],\n\n      description: fullDescription\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        -928
+      ],
+      "id": "8b780d14-ddd3-4176-91f2-16e2c0519e19",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rankings = $input.all().map(item => item.json);\n\nreturn [\n  {\n    json: {\n      rankings\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -928
+      ],
+      "id": "be75e9a5-4c77-4622-b724-ba0f6e1bc4c8",
+      "name": "Collect Rankings"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nitems.sort((a, b) => {\n  return Number(b.json.fit_score || 0) - Number(a.json.fit_score || 0);\n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        -928
+      ],
+      "id": "89a1fcdd-5dcf-428e-afd4-1b320de48fa0",
+      "name": "sort by fit"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_JOB_TRACKER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fit_score": "={{ $json.fit_score }}",
+            "recommended_action": "={{ $json.recommended_action }}",
+            "title": "={{ $json.title }}",
+            "company": "={{ $json.company }}",
+            "location": "={{ $json.location }}",
+            "source": "={{ $json.source }}",
+            "explanation": "={{ $json.explanation }}",
+            "url": "={{ $json.url }}",
+            "red_flags": "={{ $json.red_flags }}",
+            "source id": "={{ $json.source_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "source id",
+              "displayName": "source id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fit_score",
+              "displayName": "fit_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recommended_action",
+              "displayName": "recommended_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "explanation",
+              "displayName": "explanation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "red_flags",
+              "displayName": "red_flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tailored Resume",
+              "displayName": "Tailored Resume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2880,
+        -944
+      ],
+      "id": "36d27e09-200e-4ce1-bc0a-462b805aa8dc",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2432,
+        -928
+      ],
+      "id": "4514d949-ab70-481c-85f0-51ae605fa850",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5bb58f96-01b3-4de5-b832-68db3cf1eebe",
+              "leftValue": "={{ $json.fit_score }}",
+              "rightValue": 50,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2656,
+        -976
+      ],
+      "id": "c686f161-d807-44d8-8842-a5f32c535b83",
+      "name": "If"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "skills getter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NVIDIA Nemotron Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "skill embedder",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "skill embedder",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get user skill list": {
+      "main": [
+        [
+          {
+            "node": "skill embedder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "job retrieval": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "duplicate remover",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "job retrieval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "skills getter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "combine skills",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NVIDIA Nemotron Embeddings1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "job retrieval",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "skill embedder": {
+      "main": [
+        []
+      ]
+    },
+    "duplicate remover": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "NVIDIA Nemotron Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Collect Rankings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "prepare job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "json converter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "combine skills": {
+      "main": [
+        [
+          {
+            "node": "combine chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "combine chunks": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prepare job": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "json converter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Rankings": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "sort by fit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sort by fit": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "name": "Candidate Matching and Job Ranking",
+  "active": false,
+  "pinData": {},
+  "tags": []
+}

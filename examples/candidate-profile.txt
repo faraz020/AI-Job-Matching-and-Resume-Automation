@@ -1,0 +1,15 @@
+FICTIONAL EXAMPLE — replace this entire file with your own verified profile.
+
+Candidate: Example Developer
+Education: Computer Science undergraduate.
+Skills: Python, SQL, n8n, REST APIs, webhooks, vector search.
+Experience: Personal automation projects; no professional employment claimed.
+
+Project 1: Job discovery workflow
+Built a personal workflow that normalizes job listings and stores them for review.
+
+Project 2: Document search prototype
+Built a prototype that retrieves document passages using embeddings and vector search.
+
+Project 3: Task tracking integration
+Connected a form submission to a spreadsheet using webhooks and field mappings.

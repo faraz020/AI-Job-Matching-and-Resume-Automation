@@ -1,0 +1,356 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        48
+      ],
+      "id": "b388066d-336f-41cd-a853-0662c6ac71a2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://remoteok.com/api?tag=IT",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        -80
+      ],
+      "id": "8f231a7b-9197-4299-8c3d-d3a278618d22",
+      "name": "remote ok api"
+    },
+    {
+      "parameters": {
+        "jsCode": "const techKeywords = [\n  \"python\",\n  \"javascript\",\n  \"typescript\",\n  \"java\",\n  \"c++\",\n  \"c#\",\n  \"golang\",\n  \"go developer\",\n  \"rust\",\n  \"php\",\n  \"ruby\",\n  \"react\",\n  \"angular\",\n  \"vue\",\n  \"node.js\",\n  \"nodejs\",\n  \"fastapi\",\n  \"django\",\n  \"flask\",\n  \"backend\",\n  \"frontend\",\n  \"full stack\",\n  \"fullstack\",\n  \"software engineer\",\n  \"software developer\",\n  \"web developer\",\n  \"ai engineer\",\n  \"ai developer\",\n  \"machine learning\",\n  \"deep learning\",\n  \"data scientist\",\n  \"data engineer\",\n  \"devops\",\n  \"cloud engineer\",\n  \"aws\",\n  \"azure\",\n  \"gcp\",\n  \"docker\",\n  \"kubernetes\",\n  \"cybersecurity\",\n  \"cyber security\",\n  \"database\",\n  \"sql\",\n  \"api\",\n  \"qa engineer\",\n  \"test engineer\",\n  \"qa automation\"\n];\n\nreturn $input.all()\n  .filter(item => {\n    const job = item.json;\n\n    const title = job.position || \"\";\n\n    const description = job.description || \"\";\n\n    const tags = Array.isArray(job.tags)\n      ? job.tags.join(\" \")\n      : \"\";\n\n    const text = (\n      title + \" \" +\n      description + \" \" +\n      tags\n    ).toLowerCase();\n\n    return techKeywords.some(keyword =>\n      text.includes(keyword.toLowerCase())\n    );\n  })\n  .map(item => {\n    const job = item.json;\n\n    return {\n      json: {\n        source: \"Remote OK\",\n\n        source_id: String(job.id || job.slug || \"\"),\n\n        title: job.position || \"\",\n\n        company: job.company || \"\",\n\n        description: job.description || \"\",\n\n        location: job.location || \"\",\n\n        url: job.url || job.apply_url || \"\",\n\n        tags: Array.isArray(job.tags)\n          ? job.tags\n          : [],\n\n        salary_min: null,\n\n        salary_max: null,\n\n        date_posted: job.date || job.posted || null\n      }\n    };\n  });"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -80
+      ],
+      "id": "62ab5208-c122-4782-9c40-09595ef058b1",
+      "name": "remote ok normalizer"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { search_term: \"AI Developer\" } },\n  { json: { search_term: \"Machine Learning Engineer\" } },\n  { json: { search_term: \"Python Developer\" } },\n  { json: { search_term: \"Backend Developer\" } },\n  { json: { search_term: \"Software Engineer\" } },\n  { json: { search_term: \"Data Engineer\" } },\n  { json: { search_term: \"DevOps Engineer\" } }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        256
+      ],
+      "id": "17f1f593-d248-40a4-8151-b782824c8ee2",
+      "name": "List of keywords"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobs = $input.first().json.results || [];\n\nreturn jobs.map(job => {\n  return {\n    json: {\n      source: \"Adzuna\",\n      source_id: String(job.id || \"\"),\n      title: job.title || \"\",\n      company: job.company?.display_name || \"\",\n      description: job.description || \"\",\n      location: job.location?.display_name || \"\",\n      url: job.redirect_url || \"\",\n      tags: job.category?.label ? [job.category.label] : [],\n      salary_min: job.salary_min ?? null,\n      salary_max: job.salary_max ?? null,\n      date_posted: job.created || null\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        176
+      ],
+      "id": "52832781-acec-43ed-92ff-d676cc67f45d",
+      "name": "adzuna normalizer"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1104,
+        48
+      ],
+      "id": "8fe9ec1f-75d2-4054-b035-635144c85fa3",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "nvidia/nv-embedqa-e5-v5",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsNvidia",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        288
+      ],
+      "id": "44c13b39-3ea9-4d1a-be8c-a14755e97a7d",
+      "name": "NVIDIA Nemotron Embeddings"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "=Title: {{ $json.title }}\n\nCompany: {{ $json.company }}\n\nDescription: {{ $json.description }}\n\nLocation: {{ $json.location }}\n\nSkills: {{ ($json.tags || []).join(\", \") }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source ",
+                "value": "={{ $json.source }}"
+              },
+              {
+                "name": "source_id",
+                "value": "={{ $json.source_id }}"
+              },
+              {
+                "name": "title ",
+                "value": "={{ $json.title }}"
+              },
+              {
+                "name": "company ",
+                "value": "={{ $json.company }}"
+              },
+              {
+                "name": "location ",
+                "value": "={{ $json.location }}"
+              },
+              {
+                "name": "url ",
+                "value": "={{ $json.url }}"
+              },
+              {
+                "name": "tags",
+                "value": "={{ $json.tags }}"
+              },
+              {
+                "name": "description  ",
+                "value": "={{ $json.description }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        288
+      ],
+      "id": "a95aaf63-cd8a-4e5a-97b5-7f92998cfdda",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.adzuna.com/v1/api/jobs/gb/search/1?what={{ encodeURIComponent($json.search_term) }}&results_per_page=20&content-type=application/json",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        752,
+        352
+      ],
+      "id": "ebcae6ea-f349-463c-8b64-cbd1fcad7132",
+      "name": "adzuna api"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seenUrls = new Set();\nconst seenCompanyTitles = new Set();\n\nconst uniqueJobs = [];\n\nfor (const item of $input.all()) {\n  const job = item.json;\n\n  const url = (job.url || \"\")\n    .toLowerCase()\n    .trim();\n\n  const company = (job.company || \"\")\n    .toLowerCase()\n    .trim()\n    .replace(/[^a-z0-9]/g, \"\");\n\n  const title = (job.title || \"\")\n    .toLowerCase()\n    .trim()\n    .replace(/[^a-z0-9]/g, \"\");\n\n  const companyTitleKey = `${company}|${title}`;\n\n  // Duplicate if either URL or company + title already exists\n  if (\n    (url && seenUrls.has(url)) ||\n    seenCompanyTitles.has(companyTitleKey)\n  ) {\n    continue;\n  }\n\n  if (url) {\n    seenUrls.add(url);\n  }\n\n  seenCompanyTitles.add(companyTitleKey);\n\n  uniqueJobs.push(item);\n}\n\nreturn uniqueJobs;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        64
+      ],
+      "id": "fa2e9b03-88ae-449f-aae9-fc50fe7dd510",
+      "name": "duplicate remover"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "jobs",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1520,
+        64
+      ],
+      "id": "c98ee814-b249-4f57-8303-1ac1fa7f7948",
+      "name": "job embedder"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        400,
+        272
+      ],
+      "id": "b2d9c608-f3c4-4ef5-a48c-9ab54104d9f5",
+      "name": "Loop Over Items"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "List of keywords",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "remote ok api",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "remote ok api": {
+      "main": [
+        [
+          {
+            "node": "remote ok normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List of keywords": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "adzuna normalizer": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "remote ok normalizer": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "duplicate remover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NVIDIA Nemotron Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "job embedder",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "job embedder",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "adzuna api": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "duplicate remover": {
+      "main": [
+        [
+          {
+            "node": "job embedder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "adzuna normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "adzuna api",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "name": "Job Discovery and Vector Indexing",
+  "active": false,
+  "pinData": {},
+  "tags": []
+}

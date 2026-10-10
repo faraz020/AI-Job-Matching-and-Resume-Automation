@@ -1,0 +1,13 @@
+# Local secrets and private candidate data
+.env
+.env.*
+credentials*.json
+*token*.json
+private/
+exports-private/
+
+# Local tools
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
